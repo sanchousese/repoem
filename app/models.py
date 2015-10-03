@@ -45,7 +45,6 @@ class User(db.Model):
 	def __repr__(self):
 		return '<User %r>' % (self.login)
 
-
 @auth.verify_password
 def verify_password(email_or_token, password):
 	# first try to authenticate by token
@@ -57,3 +56,16 @@ def verify_password(email_or_token, password):
 			return False
 	g.user = user
 	return True
+
+class PoemFile(db.Model):
+	"""docstring for PoemFile"""
+	id = db.Column(db.Integer, primary_key = True)
+	token = db.Column(db.String(32), index = True, unique = True)
+	trained = db.Column(db.Boolean)
+
+	def as_dict(self):
+		return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
+	def serialize(self):
+		d = self.as_dict()
+		return d

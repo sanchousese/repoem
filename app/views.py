@@ -1,11 +1,16 @@
+import os
 from datetime import datetime
 from app import app, db, auth
-from flask import Flask, abort, request, jsonify, g, url_for, json
+from flask import Flask, abort, request, jsonify, g, url_for, json, render_template, redirect
 from flask.ext.cors import CORS, cross_origin
-from app.models import User
+from werkzeug import secure_filename
+from app.models import User, PoemFile
 from sqlalchemy.sql import func
+import string 
+import random
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
+ALLOWED_EXTENSIONS = set(['txt'])
 
 @app.route('/')
 @app.route('/index')
@@ -56,3 +61,40 @@ def get_auth_token():
 def get_resource():
 	return jsonify({'data': 'Hello, %s!' % g.user.login})
 
+@app.route('/upload_poem')
+@cross_origin()
+def upload_poem():
+	return render_template('poem_files.html')
+
+@app.route('/api/poem/<token>')
+@cross_origin()
+def get_poem_file(token):
+	poem_file = PoemFile.query.filter_by(token = file_token).first()
+	if not poem_file:
+		abort(400)
+	return json.dumps(poem_file.serialize())
+
+@app.route('/api/poem_files', methods = ['POST'])
+@cross_origin()
+def poem_files():
+	file = request.files['file']
+	if file and allowed_file(file.filename):
+		file_token = token_generator()
+		while PoemFile.query.filter_by(token = file_token).first() is not None:
+			file_token = token_generator()
+
+		file.save(os.path.join(app.config['UPLOAD_FOLDER'], file_token))
+		poem_file = PoemFile(token = file_token, trained = False)
+		db.session.add(poem_file)
+		db.session.commit()
+
+		print json.dumps(poem_file.serialize()), 201, {'PoemFile': url_for('get_poem_file', token = file_token, _external=True)}
+
+		return render_template('success.html')
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1] in ALLOWED_EXTENSIONS
+	
+def token_generator(size=32, chars=string.ascii_uppercase + string.digits):
+			return ''.join(random.choice(chars) for _ in range(size))
