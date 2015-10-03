@@ -2,7 +2,7 @@ from datetime import datetime
 from app import app, db, auth
 from flask import Flask, abort, request, jsonify, g, url_for, json
 from flask.ext.cors import CORS, cross_origin
-from app.models import User, Place, Image, Rating, Comment
+from app.models import User
 from sqlalchemy.sql import func
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
